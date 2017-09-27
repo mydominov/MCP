@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Модели MCP</title>
+	<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+	
+	<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.4.7/angular.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.4.7/angular-animate.js"></script>
+    <script src="//angular-ui.github.io/bootstrap/ui-bootstrap-tpls-0.14.3.js"></script>
+    <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
+	<script>
+var app = angular.module('myApp', ['ngAnimate', 'ui.bootstrap']);
+
+app.controller('myCtrl', function($scope, $http) {
+	$scope.nok = function(a, b) {
+		if (a && b) {
+			var c = a;
+			var d = b;
+		while ((a != 0) && (b != 0)) {
+			if (a > b) {
+				a = a % b;
+			} else {
+				b = b % a;
+			}
+		}
+		return (c*d)/(a + b);
+		}
+	}
+	
+	$scope.tot = function(a) {
+		if (a) {
+			return angular.fromJson(a).t;
+		}
+	}
+	
+	$scope.aChanged = function() {
+		if ($scope.aLen != "") {
+
+			var aObject = {
+					"length" : $scope.aLen
+			}
+			
+			var aResponse = $http({
+				method : 'POST',
+				url : 'getPolinomials',
+				data : aObject
+			}).then(function successCallback(response) {
+				$scope.aFunctions = response.data.content;
+			})
+		}
+	}
+	
+	$scope.bChanged = function() {
+		if ($scope.bLen != "") {
+			var bObject = {
+					"length" : $scope.bLen
+			}
+			
+			var aResponse = $http({
+				method : 'POST',
+				url : 'getPolinomials',
+				data : bObject
+			}).then(function successCallback(response) {
+				$scope.bFunctions = response.data.content;
+			})
+		}
+	}
+	
+	$scope.genS0 = function () {
+		if ($scope.aSelect && $scope.bSelect) {
+			if ($scope.mode === 'custom') {
+				$scope.s0 = '\n';
+			} else {
+				if (($scope.mode === 'smith') && (rVal > 0)) {
+					
+					
+				} else {
+					var modeObject = {
+						"i" : angular.fromJson($scope.aSelect).length,
+						"j" : angular.fromJson($scope.bSelect).length,
+						"mode" : $scope.mode
+					};
+					$http({
+						method : 'POST',
+						url : 'generateMatrix',
+						data : modeObject
+					}).then(function successCallback(response) {
+						var matrix = "";
+						var i,j;
+					
+						for (i = 0; i < response.data.length; ++i) {
+							for (j = 0; j < response.data[0].length; ++j) {
+								matrix += response.data[i][j] + " ";
+							}
+							matrix += '\n';
+						}
+						$scope.s0 = matrix;
+						$scope.sn = matrix;
+					})
+				}
+			}
+		}
+	}
+	
+	$scope.changeS0 = function() {
+		$scope.sn = $scope.s0;
+	}
+	
+	$scope.getMatrixA = function() {
+		var dataObj = {number : angular.fromJson($scope.aSelect).number};
+		$http({
+			method : 'POST',
+			url : 'getMatrixAFromNumber',
+			data : dataObj
+		}).then(function successCallback(response) {
+			var matrix = "";
+			var i,j;
+			
+			for (i = 0; i < response.data.length; ++i) {
+				for (j = 0; j < response.data[0].length; ++j) {
+					matrix += response.data[i][j] + " ";
+				}
+				matrix += '\n';
+			}
+			$scope.aMatrix = matrix;
+		})
+	}
+	
+	$scope.getMatrixB = function() {
+		var dataObj = {number : angular.fromJson($scope.bSelect).number};
+		$http({
+			method : 'POST',
+			url : 'getMatrixBFromNumber',
+			data : dataObj
+		}).then(function successCallback(response) {
+			var matrix = "";
+			var i,j;
+			
+			for (i = 0; i < response.data.length; ++i) {
+				for (j = 0; j < response.data[0].length; ++j) {
+					matrix += response.data[i][j] + " ";
+				}
+				matrix += '\n';
+			}
+			$scope.bMatrix = matrix;
+		})
+	}
+	
+	$scope.nxtIter = function () {
+		var numIter;
+		if ($scope.colIter) {
+			numIter = $scope.colIter;
+		} else {
+			numIter = 1;
+		}
+		
+		var dataObj = {A : $scope.aMatrix,
+					   B : $scope.bMatrix,
+					   S : $scope.sn,
+					   iteration : numIter};
+		
+		$http({
+			method : 'POST',
+			url : 'multiply',
+			data : dataObj
+		}).then(function successCallback(response) {
+			var matrix = "";
+			var i,j;
+			for (i = 0; i < response.data.length; ++i) {
+				for (j = 0; j < response.data[0].length; ++j) {
+					matrix += response.data[i][j] + " ";
+				}
+				matrix += '\n';
+			}
+			$scope.sn = matrix;
+		})
+	}
+	
+	$scope.nxtPeriod = function () {
+		var period = $scope.nok($scope.tot($scope.aSelect), $scope.tot($scope.bSelect));
+		if (period) {
+			var numIter = $scope.period;
+		
+		
+		var dataObj = {A : $scope.aMatrix,
+					   B : $scope.bMatrix,
+					   S : $scope.sn,
+					   iteration : period};
+		
+		$http({
+			method : 'POST',
+			url : 'multiply',
+			data : dataObj
+		}).then(function successCallback(response) {
+			var matrix = "";
+			var i,j;
+			for (i = 0; i < response.data.length; ++i) {
+				for (j = 0; j < response.data[0].length; ++j) {
+					matrix += response.data[i][j] + " ";
+				}
+				matrix += '\n';
+			}
+			$scope.sn = matrix;
+		})
+		}
+	}
+	
+	$scope.checkPeriod = function () {
+		var objData = {
+				A : $scope.aMatrix,
+				   B : $scope.bMatrix,
+				   S : $scope.sn,
+				   S0 : $scope.s0
+		}
+		
+		$http({
+			method : 'POST',
+			url : 'checkPeriod',
+			data : objData
+		}).then(function successCallback(response) {
+			$scope.period = response.data;
+		})
+	}
+});
+app.filter('num', function() {
+    return function(input) {
+      return parseInt(input, 10);
+    }
+});
+</script>
+</head>
+<body>
+<div class="container" ng-app="myApp" ng-controller="myCtrl">
+	<h1 class="text-center">Модели МСР</h1>
+	<h2>1. Задание исходных данных</h2>
+	<div class="row">
+		<div class="col-sm-5">
+			<h3>1.1 Определение способа задания матриц A и B</h3>
+			<input type="radio" name="method" ng-model="content" value="1"> Задание степени матриц A и B<Br>
+   			<input type="radio" name="method" ng-model="content" value="2"> A = B<sup>-1</sup><Br>
+   			<div ng-show="(content == '1')">
+			<h3>1.2 Задание степени матриц A и B:</h3>
+			<table>
+				<tr>
+					<td>степень полинома матрицы А:</td>
+					<td><input id="aLen" ng-model="aLen" class="form-control" type="number" ng-change="aChanged()"></td>
+				</tr>
+				<tr>
+					<td>степень полинома матрицы B:</td>
+					<td><input id="bLen" ng-model="bLen" class="form-control" type="number" ng-change="bChanged()"></td>
+				</tr>
+			</table>
+			</div>
+			<div ng-show="(content == '2')">
+			<h3>1.2 Задание степени матрицы A:</h3>
+			<table>
+				<tr>
+					<td>степень полинома матрицы А:</td>
+					<td><input id="aLen" ng-model="aLen" class="form-control" type="number" ng-change="aChanged()"></td>
+				</tr>
+			</table>
+			</div>
+			<h3>1.3 Задание свойств полиномов</h3>
+			<h4>
+				<ul class="pagination">
+					<li>
+						<a tooltip="Непримитивный, корни линейно зависимы и сопряжены, множество линейно зависимо" tooltip-placement="top">A</a>
+					</li>
+					<li>
+						<a tooltip-placement="top" tooltip="Непримитивный, корни линейно зависимы и сопряжены, множество линейно независимо">B</a>
+					</li>
+					<li>
+						<a tooltip-placement="top" tooltip="Непримитивный, корни линейно независимы и сопряжены, множество линейно зависимо">C</a>
+					</li>
+					<li>
+						<a tooltip-placement="top" tooltip="Непримитивный, корни линейно независимы и сопряжены, множество линейно независимо">D</a>
+					</li>
+					<li>
+						<a tooltip-placement="top" tooltip="Примитивный, корни линейно зависимы и сопряжены, множество линейно зависимо">E</a>
+					</li>
+					<li>
+						<a tooltip-placement="top" tooltip="Примитивный, корни линейно зависимы и сопряжены, множество линейно независимо">F</a>
+					</li>
+					<li>
+						<a tooltip-placement="top" tooltip="Примитивный, корни линейно независимы и сопряжены, множество линейно зависимо">G</a>
+					</li>
+					<li>
+						<a tooltip-placement="top" tooltip="Примитивный, корни линейно независимы и сопряжены, множество линейно независимо">H</a>
+					</li>
+				</ul>
+			</h4>
+			<!--  
+			<table class="table">
+				<tr>
+					<td>Свойство матрицы А</td>
+					<td>
+						<select ng-model="aProperty" ng-change="aChanged()" class="form-control">
+							<option>A</option>
+							<option>B</option>
+							<option>C</option>
+							<option>D</option>
+							<option>E</option>
+							<option>F</option>
+							<option>G</option>
+							<option>H</option>
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<td>Свойство матрицы B</td>
+					<td>
+						<select ng-model="bProperty" ng-change="bChanged()" class="form-control">
+							<option>A</option>
+							<option>B</option>
+							<option>C</option>
+							<option>D</option>
+							<option>E</option>
+							<option>F</option>
+							<option>G</option>
+							<option>H</option>
+						</select>
+					</td>
+				</tr>
+			</table>
+			-->
+		</div>
+		
+		<div class="col-sm-5" ng-hide="!(aFunctions && bFunctions)">
+			<h3>1.4 Выбор подходящей функции</h3>
+			<table class="table">
+				<tr>
+					<td><label for="fax">f<small>a</small>(x) - </label></td>
+					<td>
+						<select id="fax" class="form-control" ng-model="aSelect" ng-change="getMatrixA()">
+							<option value="" selected>None</option>
+							<option ng-repeat="aFunction in aFunctions" value="{{aFunction}}">{{aFunction.j}} {{aFunction.function+aFunction.property}}</option>
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<label for="fbx">f<small>b</small>(x) - </label>
+					</td>
+					<td>
+						
+						<select id="fbx" class="form-control" ng-model="bSelect" ng-change="getMatrixB()">
+							<option value="" selected>None</option>
+							<option ng-repeat="bFunction in bFunctions" value="{{bFunction}}">{{bFunction.j}} {{bFunction.function+bFunction.property}}</option>
+						</select>
+					</td>
+				</tr>
+			</table>
+			<a class="btn btn-link" href="addPolynomial.html">Или Вы можете добавить Ваш полином</a>
+			<div ng-hide="!(aSelect && bSelect)">
+				<h3>1.4 Подсчёт периода функции</span></h3>
+				<h4>T = H.O.K. (T<small>a</small>,T<small>b</small>) <span ng-hide="!(aSelect && bSelect)">= {{nok(tot(aSelect), tot(bSelect))}}</span></h4>
+				<h4>T<small>a</small> = 2<sup>n</sup> - 1 <span ng-hide="!aSelect">= {{tot(aSelect)}}</span></h4>
+				<h4>T<small>b</small> = 2<sup>m</sup> - 1 <span ng-hide="!bSelect">= {{tot(bSelect)}}</span></h4>
+			</div>
+		</div>
+</div>	
+<div ng-hide="!(aSelect && bSelect)">	
+<h2>2. Задание начального состояния матрицы S<small>0</small></h2>
+<div class="row">
+	<div class="col-sm-5">
+			<input type="radio" name="smethod" value="auto" ng-model="mode" ng-change="genS0()"> Автоматически
+  			<br>
+  			<input type="radio" name="smethod" value="diag" ng-model="mode" ng-change="genS0()"> Диагональная
+  			<br>
+  			<input type="radio" name="smethod" value="block" ng-model="mode" ng-change="genS0()" disabled> Блочная
+  			<br>
+  			<input type="radio" name="smethod" value="custom" ng-model="mode" ng-change="genS0()"> Произвольная
+  			<br>
+  			<input type="radio" name="smethod" value="smith" ng-model="mode" ng-change="genS0()"> Матрица Смитта
+  			<br>
+  			<table>
+  				<tr><td>
+  					<h5>r(для построения матрицы Смитта):</h5>
+  					</td>
+  					<td>
+  					<input type="number" class="form-control" name="rVal" ng-model="rVal" ng-change="genS0()">
+  					</td>
+  				</tr>
+  			</table>
+  			 
+  			<br>
+  			<div ng-hide="!s0">
+				<textarea ng-model="s0" class="form-control"></textarea>
+				<br>
+				<button class="btn btn-primary" ng-click="changeS0()">Изменить S0 матрицу</button>
+				<p><i><u>* При нажатии на кнопку история подсчётов обнулится.</u></i></p>
+			</div>
+	</div>
+</div>
+</div>
+<div ng-hide="!(aSelect && bSelect && sn)">
+<h2>3. Этап подсчётов</h2>
+<h3>S<small>i+1</small> = A * S<small>i</small> * B</h3>
+<div class="row">
+	<div class="col-sm-3">
+		<textarea class="form-control" ng-model="aMatrix" tooltip-placement="top" tooltip="Матрица А" readonly></textarea>
+	</div>
+	<div class="col-sm-1">
+		<h3>x</h3>
+	</div>
+	<div class="col-sm-3">
+		<textarea class="form-control" ng-model="sn" tooltip-placement="top" tooltip="Матрица текущего состояния" ></textarea>
+	</div>
+	<div class="col-sm-1">
+		<h3>x</h3>
+	</div>
+	<div class="col-sm-3">
+		<textarea class="form-control" ng-model="bMatrix" tooltip-placement="top" tooltip="Матрица B" readonly></textarea>
+	</div>
+</div>
+<br>
+<p><button class="btn btn-primary" ng-click="nxtIter()">Следующая итерация</button></p>
+<p><button class="btn btn-primary" ng-click="nxtPeriod()">Просчитать целый период</button></p>
+<p>ещё <input type="number" ng-model="colIter"> итераций <button class="btn btn-default" ng-click="nxtIter()">Применить</button></p>
+<p><button class="btn btn-primary" ng-click="checkPeriod()">Получить практический период</button></p>
+<div ng-hide="!period">
+	<p>Теоретический период: {{nok(tot(aSelect), tot(bSelect))}}</p>
+	<p>Практический период: {{period}}</p>
+</div>
+</div>
+</body>
+</html>
